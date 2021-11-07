@@ -25,3 +25,5 @@ int gettok(char **outptr);
 int inarg(char c);
 
 int runcommand(char **cline, int where);
+
+void chDir(char **arg);

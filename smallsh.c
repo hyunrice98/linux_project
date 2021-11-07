@@ -109,7 +109,7 @@ void procline() {
 //                    }
                     char *first = arg[0];
                     if (!strcmp(first, "cd\0")) {
-                        // TODO: do some cd stuff here
+                        chDir(arg);
                     } else if (!strcmp(first, "exit()\0") || !strcmp(first, "return\0")) {
                         printf("BYE!\n");
                         exit(1);
@@ -148,4 +148,17 @@ int runcommand(char **cline, int where) {
         return -1;
     else
         return status;
+}
+
+void chDir(char **arg) {
+    char directoryBuffer[MAXBUF];
+    char pathname[MAXBUF];
+
+    getcwd(directoryBuffer, MAXBUF);
+
+    strcpy(pathname, directoryBuffer);
+    strcat(pathname, "/");
+    strcat(pathname, arg[1]);
+
+    chdir(pathname);
 }
