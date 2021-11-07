@@ -101,9 +101,22 @@ void procline() {
                     type = BACKGROUND;
                 else
                     type = FOREGROUND;
+                // MARK: Real command running is here
                 if (narg != 0) {
                     arg[narg] = NULL;
-                    runcommand(arg, type);
+//                    for (int i = 0; i < narg; i++) {
+//                        printf("narg[%d]: %s\n", i, arg[i]);
+//                    }
+                    char *first = arg[0];
+                    if (!strcmp(first, "cd\0")) {
+                        // TODO: do some cd stuff here
+                    } else if (!strcmp(first, "exit()\0") || !strcmp(first, "return\0")) {
+                        printf("BYE!\n");
+                        exit(1);
+                    } else {
+                        arg[narg] = NULL;
+                        runcommand(arg, type);
+                    }
                 }
                 if (toktype == EOL) return;
                 narg = 0;
