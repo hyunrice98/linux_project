@@ -101,20 +101,25 @@ void procline() {
                     type = BACKGROUND;
                 else
                     type = FOREGROUND;
-                // MARK: Real command running is here
                 if (narg != 0) {
                     arg[narg] = NULL;
+
 //                    for (int i = 0; i < narg; i++) {
 //                        printf("narg[%d]: %s\n", i, arg[i]);
 //                    }
+
                     char *first = arg[0];
+                    // making cd exception
                     if (!strcmp(first, "cd\0")) {
-                        chDir(arg);
-                    } else if (!strcmp(first, "exit()\0") || !strcmp(first, "return\0")) {
+                        chDir(arg, narg);
+                    }
+                        // exit || return exception
+                    else if (!strcmp(first, "exit()\0") || !strcmp(first, "return\0")) {
                         printf("BYE!\n");
                         exit(1);
-                    } else {
-                        arg[narg] = NULL;
+                    }
+                        // normal command execution
+                    else {
                         runcommand(arg, type);
                     }
                 }
@@ -135,6 +140,7 @@ int runcommand(char **cline, int where) {
             perror("smallsh");
             return -1;
         case 0:
+            fileOutput(cline);
             execvp(*cline, cline);
             perror(*cline);
             exit(1);
@@ -150,15 +156,46 @@ int runcommand(char **cline, int where) {
         return status;
 }
 
-void chDir(char **arg) {
-    char directoryBuffer[MAXBUF];
-    char pathname[MAXBUF];
+void chDir(char **arg, int narg) {
+    if (narg != 2) {
+        perror("cd command should have two arguments\n");
+        return;
+    }
+    char currentDirectory[MAXBUF];
+    char newDirectory[MAXBUF];
 
-    getcwd(directoryBuffer, MAXBUF);
+    getcwd(currentDirectory, MAXBUF);
 
-    strcpy(pathname, directoryBuffer);
-    strcat(pathname, "/");
-    strcat(pathname, arg[1]);
+    strcpy(newDirectory, currentDirectory);
+    strcat(newDirectory, "/");
+    strcat(newDirectory, arg[1]);
 
-    chdir(pathname);
+    chdir(newDirectory);
+}
+
+int fileOutput(char **cline) {
+    int i, fd;
+
+    for (i = 0; cline[i] != NULL; i++) {
+        if (!strcmp(cline[i], ">")) break;
+    }
+
+    if (cline[i]) {
+        char *filename = cline[i + 1];
+        fd = open(filename, O_WRONLY | O_CREAT, 0644);
+        if (fd == -1) {
+            perror(strcat(cline[i + 1], " cannot be opened (fileOutput Error)"));
+            return -1;
+        }
+
+        dup2(fd, STDOUT_FILENO);
+        close(fd);
+
+        cline[i] = NULL;
+        cline[i + 1] = NULL;
+
+        for (; cline[i] != NULL; i++) cline[i] = cline[i + 2];
+        cline[i] = NULL;
+    }
+    return 0;
 }

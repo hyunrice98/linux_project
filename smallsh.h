@@ -26,4 +26,6 @@ int inarg(char c);
 
 int runcommand(char **cline, int where);
 
-void chDir(char **arg);
+void chDir(char **arg, int narg);
+
+int fileOutput(char **cline);
