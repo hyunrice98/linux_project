@@ -97,6 +97,7 @@ void procline() {
             case EOL:
             case SEMICOLON:
             case AMPERSAND:
+                // TODO: Problem with '&'. "ls -l &>file1; ls &> file2" not working
                 if (toktype == AMPERSAND)
                     type = BACKGROUND;
                 else
@@ -104,18 +105,13 @@ void procline() {
                 if (narg != 0) {
                     arg[narg] = NULL;
 
-//                    for (int i = 0; i < narg; i++) {
-//                        printf("narg[%d]: %s\n", i, arg[i]);
-//                    }
-
                     char *first = arg[0];
                     // making cd exception
                     if (!strcmp(first, "cd\0")) {
                         chDir(arg, narg);
                     }
                         // exit || return exception
-                    else if (!strcmp(first, "exit()\0") || !strcmp(first, "return\0")) {
-                        printf("BYE!\n");
+                    else if (!strcmp(first, "exit\0") || !strcmp(first, "exit()\0") || !strcmp(first, "return\0")) {
                         exit(1);
                     }
                         // normal command execution
@@ -150,6 +146,7 @@ int runcommand(char **cline, int where) {
         printf("[Process id] %d\n", pid);
         return 0;
     }
+
     if (waitpid(pid, &status, 0) == -1)
         return -1;
     else
@@ -173,6 +170,7 @@ void chDir(char **arg, int narg) {
     chdir(newDirectory);
 }
 
+// if ">" found, dup file & clear [>, filepath] value
 int fileOutput(char **cline) {
     int i, fd;
 
