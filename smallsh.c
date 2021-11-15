@@ -97,7 +97,6 @@ void procline() {
             case EOL:
             case SEMICOLON:
             case AMPERSAND:
-                // TODO: Problem with '&'. "ls -l &>file1; ls &> file2" not working
                 if (toktype == AMPERSAND)
                     type = BACKGROUND;
                 else
@@ -126,10 +125,21 @@ void procline() {
     }
 }
 
+void zombieHandler(int a) {
+    int status;
+    wait(&status);
+}
+
 // runs command
 int runcommand(char **cline, int where) {
     pid_t pid;
     int status;
+
+    struct sigaction act;
+    sigfillset(&act.sa_mask);
+    act.sa_handler = zombieHandler;
+    act.sa_flags = SA_RESTART;
+    sigaction(SIGCHLD, &act, NULL);
 
     switch (pid = fork()) {
         case -1:
@@ -142,6 +152,7 @@ int runcommand(char **cline, int where) {
             exit(1);
     }
 
+    // Below is 4 parent
     if (where == BACKGROUND) {
         printf("[Process id] %d\n", pid);
         return 0;
