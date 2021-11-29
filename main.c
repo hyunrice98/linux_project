@@ -1,8 +1,6 @@
 #include "smallsh.h"
 
-char *prompt = "Command> ";
-
 int main() {
-    while (userin(prompt) != EOF) procline();
+    while (userin() != EOF) procline();
     return 0;
 }

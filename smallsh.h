@@ -17,7 +17,7 @@
 #define FOREGROUND 0
 #define BACKGROUND 1
 
-int userin(char *p);
+int userin();
 
 void procline();
 

@@ -1,14 +1,11 @@
 #include "smallsh.h"
 
-// TODO: cd implementation
-//      if argument !=2, error print
-// TODO: exit
-//      shell exiting function
-// TODO: '>' Handling
-//      writes standard output in particular file.
-//      should work with '>', ';', '&' used in same time
-// TODO: '&' problem finding
-//      (zombie, orphan)
+// TODO: '&' 처리. background process 종료되면 signal 받아 정상 종료 완료되도록 처리
+// TODO: 입력 prompt 에 "Command>" 대신 "현재 디렉토리" 표시
+// TODO: SIGINT 처리. Foreground process들 종료. smallsh는 종료되지 않고 prompt 다시 표시
+// TODO: '|' (pipe) 처리. command1 | command2
+//       -> command1의 STDOUT 이 command2의 STDIN 이 되도록 두 프로세스를 연결
+
 
 static char inpbuf[MAXBUF];
 static char tokbuf[2 * MAXBUF];
@@ -20,12 +17,15 @@ static char special[] = {' ', '\t', '&', ';', '\n', '\0'};
 // p: keyboard input (in main)
 // sets user input in inpbuf
 // count: number of letter in inpbuf (p)
-int userin(char *p) {
+int userin() {
     int c, count;
     ptr = inpbuf;
     tok = tokbuf;
 
-    printf("%s", p);
+    char currentDirectory[MAXBUF];
+    getcwd(currentDirectory, MAXBUF);
+    strcat(currentDirectory, " > ");
+    printf("%s", currentDirectory);
     count = 0;
 
     // Getting letter by letter
@@ -41,7 +41,7 @@ int userin(char *p) {
         if (c == '\n' || count >= MAXBUF) {
             printf("smallsh: input line too long\n");
             count = 0;
-            printf("%s", p);
+            printf("%s", currentDirectory);
         }
     }
 }
@@ -110,7 +110,9 @@ void procline() {
                         chDir(arg, narg);
                     }
                         // exit || return exception
-                    else if (!strcmp(first, "exit\0") || !strcmp(first, "exit()\0") || !strcmp(first, "return\0")) {
+                    else if (!strcmp(first, "exit\0") ||
+                             !strcmp(first, "exit()\0") ||
+                             !strcmp(first, "return\0")) {
                         exit(1);
                     }
                         // normal command execution
@@ -169,9 +171,9 @@ void chDir(char **arg, int narg) {
         perror("cd command should have two arguments\n");
         return;
     }
-    char currentDirectory[MAXBUF];
     char newDirectory[MAXBUF];
 
+    char currentDirectory[MAXBUF];
     getcwd(currentDirectory, MAXBUF);
 
     strcpy(newDirectory, currentDirectory);
