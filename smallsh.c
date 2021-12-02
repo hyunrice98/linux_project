@@ -1,11 +1,10 @@
 #include "smallsh.h"
 
-// TODO: '&' 처리. background process 종료되면 signal 받아 정상 종료 완료되도록 처리
-// TODO: 입력 prompt 에 "Command>" 대신 "현재 디렉토리" 표시
+// TODO: '&' 처리. 고아 처리 완료후 cwd 출력.
+// 입력 prompt 에 "Command>" 대신 "현재 디렉토리" 표시
 // TODO: SIGINT 처리. Foreground process들 종료. smallsh는 종료되지 않고 prompt 다시 표시
 // TODO: '|' (pipe) 처리. command1 | command2
 //       -> command1의 STDOUT 이 command2의 STDIN 이 되도록 두 프로세스를 연결
-
 
 static char inpbuf[MAXBUF];
 static char tokbuf[2 * MAXBUF];
@@ -24,7 +23,7 @@ int userin() {
 
     char currentDirectory[MAXBUF];
     getcwd(currentDirectory, MAXBUF);
-    strcat(currentDirectory, " > ");
+    strcat(currentDirectory, "$ ");
     printf("%s", currentDirectory);
     count = 0;
 
@@ -132,6 +131,11 @@ void zombieHandler(int a) {
     wait(&status);
 }
 
+void catchSigint(int signo) {
+    int status;
+    kill(&status, signo);
+}
+
 // runs command
 int runcommand(char **cline, int where) {
     pid_t pid;
@@ -140,8 +144,13 @@ int runcommand(char **cline, int where) {
     struct sigaction act;
     sigfillset(&act.sa_mask);
     act.sa_handler = zombieHandler;
-    act.sa_flags = SA_RESTART;
+    act.sa_flags = SA_RESTART | SA_NOCLDSTOP;
     sigaction(SIGCHLD, &act, NULL);
+
+    struct sigaction act2;
+    act2.sa_handler = catchSigint;
+    sigfillset(&act2.sa_mask);
+    sigaction(SIGINT, &act2, NULL);
 
     switch (pid = fork()) {
         case -1:
