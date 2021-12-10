@@ -13,6 +13,9 @@ static char *tok = tokbuf;
 
 static char special[] = {' ', '\t', '&', ';', '\n', '\0'};
 
+char *argv1[MAXBUF] = {};
+char *argv2[MAXBUF] = {};
+
 // p: keyboard input (in main)
 // sets user input in inpbuf
 // count: number of letter in inpbuf (p)
@@ -72,7 +75,7 @@ int gettok(char **outptr) {
 }
 
 // returns 0: if given input c is special letter
-// returns 1: if not special letter
+// returns 1: if not speci-al letter
 int inarg(char c) {
     char *wrk;
 
@@ -136,6 +139,10 @@ void catchSigint(int signo) {
     kill(&status, signo);
 }
 
+void ignSigint(int signo) {
+    signal(signo, SIG_IGN);
+}
+
 // runs command
 int runcommand(char **cline, int where) {
     pid_t pid;
@@ -152,27 +159,49 @@ int runcommand(char **cline, int where) {
     sigfillset(&act2.sa_mask);
     sigaction(SIGINT, &act2, NULL);
 
-    switch (pid = fork()) {
-        case -1:
-            perror("smallsh");
-            return -1;
-        case 0:
-            fileOutput(cline);
-            execvp(*cline, cline);
-            perror(*cline);
-            exit(1);
+    for (int i = 0; i < MAXBUF; i++) {
+        argv1[i] = NULL;
+        argv2[i] = NULL;
     }
-
-    // Below is 4 parent
-    if (where == BACKGROUND) {
-        printf("[Process id] %d\n", pid);
-        return 0;
+    int i, j;
+    int hasPipe = 0;
+    for (i = 0; cline[i] != NULL; i++) {
+        argv1[i] = cline[i];
+        if (!strcmp(cline[i], "|")) {
+            argv1[i] = NULL;
+            hasPipe = 1;
+            break;
+        }
     }
+    if (hasPipe == 1) {
+        for (j = i + 1; cline[j] != NULL; j++) {
+            argv2[j - i - 1] = cline[j];
+        }
+        pipeHandler(argv1, argv2);
+    } else {
+        switch (pid = fork()) {
+            case -1:
+                perror("smallsh");
+                return -1;
+            case 0:
+                fileOutput(cline);
+                execvp(*cline, cline);
+                perror(*cline);
+                exit(1);
+            default:
+                // Below is 4 parent
+                signal(SIGINT, ignSigint);
+                if (where == BACKGROUND) {
+                    printf("[Process id] %d\n", pid);
+                    return 0;
+                }
 
-    if (waitpid(pid, &status, 0) == -1)
-        return -1;
-    else
-        return status;
+                if (waitpid(pid, &status, 0) == -1)
+                    return -1;
+                else
+                    return status;
+        }
+    }
 }
 
 void chDir(char **arg, int narg) {
@@ -218,4 +247,23 @@ int fileOutput(char **cline) {
         cline[i] = NULL;
     }
     return 0;
+}
+
+int pipeHandler() {
+    int p[2];
+
+    if (pipe(p) == -1) {
+        perror("pipe call");
+        return 1;
+    }
+
+    if (fork() == 0) {
+        dup2(p[0], STDIN_FILENO);
+        if (fork() == 0) {
+            dup2(p[1], STDOUT_FILENO);
+            execvp(argv1[0], argv1);
+        }
+        wait(NULL);
+        execvp(argv2[0], argv2);
+    }
 }

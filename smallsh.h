@@ -30,3 +30,5 @@ int runcommand(char **cline, int where);
 void chDir(char **arg, int narg);
 
 int fileOutput(char **cline);
+
+int pipeHandler(char **argv1, char **argv2);
